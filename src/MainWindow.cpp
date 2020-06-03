@@ -27,12 +27,11 @@ MainWindow::MainWindow(QWidget *parent) :
     treeView->expandAll();
     treeView->show();
 
-    qDebug() << "try: " << (utils::StyleRecord("a", "1") == utils::StyleRecord("a", "2"));
 
 
     // Set delegate for style
-    // TODO memory leak
     ui->styleList->setItemDelegate(new StyleDelegate());
+    ui->attrList->setItemDelegate(new StyleDelegate());
     DOMDelegate *domDelegate = new DOMDelegate();
     treeView->setItemDelegate(domDelegate);
 
@@ -216,14 +215,20 @@ void MainWindow::removeDomElement()
 
 void MainWindow::saveToFile()
 {
-    QString fileName = QFileDialog::getSaveFileName(this,
+    QString fileName_html = QFileDialog::getSaveFileName(this,
                                                     tr("Сохранить DOM"), "",
                                                     tr("HTML (*.html);;All Files (*)"));
 
-    if (!fileName.isEmpty()) {
-        std::ofstream file;
+    QString fileName_css = QFileDialog::getSaveFileName(this,
+                                                    tr("Сохранить стили"), "",
+                                                    tr("CSS (*.css);;All Files (*)"));
+
+    if (!fileName_html.isEmpty() && !fileName_css.isEmpty()) {
+        std::ofstream file_html;
+        std::ofstream file_css;
         try {
-            file.open(fileName.toStdString(), std::ofstream::out);
+            file_html.open(fileName_html.toStdString(), std::ofstream::out);
+            file_css.open(fileName_css.toStdString(), std::ofstream::out);
         }
         catch (std::system_error& e) {
             QMessageBox::information(this, tr("Не удалось открыть файл"),
@@ -231,10 +236,9 @@ void MainWindow::saveToFile()
             return;
         }
 
-        // Проверку можно убрать
-        if (file.is_open()) {
-            file << m_treeModel->getSerializeData();
-        }
+        std::pair<std::string, std::string> data = m_treeModel->getSerializeData();
+        file_html << data.first;
+        file_css << data.second;
     }
     else {
         return;

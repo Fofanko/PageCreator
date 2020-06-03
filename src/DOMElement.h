@@ -25,6 +25,7 @@ public:
 
     void addAttribute(const std::string &name, const std::string &value);
     utils::unordered_set_StyleRecord *getAttributes();
+    std::string getText();
 
     std::string getAttributesAsString();
 

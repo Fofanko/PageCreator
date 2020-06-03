@@ -55,7 +55,7 @@ public:
     BFSIterator begin();
     BFSIterator end();
 
-    std::string getSerializeData();
+    std::pair<std::string, std::string> getSerializeData();
     std::string getSerializeData(HTMLNode* node, unsigned level, std::map<HTMLNode*, std::vector<utils::TagStyleClass*>> styleMap);
 
     void readFromString(const std::string& stream);
@@ -77,8 +77,9 @@ public:
     BFSIterator(HTMLNode* root)
     {
         m_currentNode = root;
-        qDebug() << root;
-        m_bfsQueue.push(root);
+        for(HTMLNode* children: m_currentNode->getChilds()) {
+            m_bfsQueue.push(root);
+        }
     }
 
     void next()

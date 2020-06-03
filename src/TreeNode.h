@@ -14,11 +14,7 @@ template <class T>
 class TreeNode
 {
 public:
-
-    explicit TreeNode(const T &data, TreeNode<T>* parent = nullptr): m_data(data), m_parent(parent)
-    {
-
-    }
+    explicit TreeNode(const T &data, TreeNode<T>* parent = nullptr): m_data(data), m_parent(parent){}
 
     ~TreeNode() {
         qDeleteAll(m_childs);

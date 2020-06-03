@@ -7,18 +7,6 @@ PageTree::PageTree(const DOMElement &data, QObject *parent)
     DOMElement *div = new DOMElement(Tags::getInstance()->getIdByString("html"));
     HTMLNode *beginNode = new HTMLNode(*div, m_root);
     m_root->appendChild(beginNode);
-
-//    HTMLNode *test2Node = new HTMLNode(DOMElement(1), testNode);
-//    test2Node->data().addStyle("margin", "4px");
-//    test2Node->data().addStyle("float", "left");
-//    testNode->appendChild(test2Node);
-
-//    test2Node = new HTMLNode(DOMElement(2), testNode);
-//    test2Node->data().addStyle("margin", "4px");
-//    testNode->appendChild(test2Node);
-
-//    HTMLNode *test3Node = new HTMLNode(DOMElement(3), test2Node);
-//    test2Node->appendChild(test3Node);
 }
 
 PageTree::~PageTree()
@@ -185,7 +173,7 @@ BFSIterator PageTree::end()
     return BFSIterator(cur);
 }
 
-std::string PageTree::getSerializeData()
+std::pair<std::string, std::string> PageTree::getSerializeData()
 {
     std::vector<utils::StyleRecord> usedStyles;
     utils::unordered_set_StyleRecord allStyles;
@@ -228,7 +216,7 @@ std::string PageTree::getSerializeData()
 
     std::string htmlCode = getSerializeData(m_root, 0, styleMap);
 
-    std::string cssCode = "<style>\n";
+    std::string cssCode = "";
     for (const utils::TagStyleClass *styleClass: styleClasses){
         cssCode += "." + styleClass->className + "{\n";
         for (utils::StyleRecord record : styleClass->styles){
@@ -236,20 +224,9 @@ std::string PageTree::getSerializeData()
         }
         cssCode += "\n}\n\n";
     }
-    cssCode += "</style>";
 
     qDebug() << (htmlCode + cssCode).c_str();
-    return htmlCode + cssCode;
-}
-
-
-
-void PageTree::test() {
-    int c=0;
-    for(BFSIterator it = begin(); it != end(); ++it) {
-        c++;
-    }
-    qDebug() << "count is " << c;
+    return std::pair<std::string, std::string>(htmlCode, cssCode);
 }
 
 
@@ -259,21 +236,24 @@ std::string PageTree::getSerializeData(HTMLNode *node, unsigned level, const std
     std::string data;
     std::string tabs;
     std::string style;
-    for(unsigned i=0; i < level; ++i) tabs+="\t";
+    for(unsigned i=1; i < level; ++i) tabs+="\t";
     auto styleMapIt = styleMap.find(node);
     if( styleMapIt != styleMap.end() ){
         for(const utils::TagStyleClass *styleClass : styleMapIt->second){
             style += styleClass->className + " ";
         }
     }
+    if (level) {
     data += tabs + "<" +
             node->data().getTagAsString() + " " +
             (!style.empty()?(" style='" + style + "'"):std::string(""))
-            + node->data().getAttributesAsString() + ">\n";
+            + node->data().getAttributesAsString() + ">\n" +
+            node->data().getText();
+    }
     for( HTMLNode* child: node->getChilds() ) {
         data += getSerializeData(child, level + 1, styleMap);
     }
-    data += tabs + "</" + node->data().getTagAsString() + ">\n";
+    if (level) data += tabs + "</" + node->data().getTagAsString() + ">\n";
     return data;
 }
 
@@ -382,7 +362,7 @@ void PageTree::readFromString(const std::string& stream)
             tagStack.push(node);
 
         } else if (comTok.type == dsm::BASE_TYPE::TEXT) {
-            // text
+            tagStack.top()->data().addAttribute("text", comTok.data);
         } else {
             dsm::StateMachine stateMachine;
             for(char ch: comTok.data) {
@@ -391,16 +371,10 @@ void PageTree::readFromString(const std::string& stream)
             stateMachine.step('\0');
             std::list<dsm::Token> *tokenStream = stateMachine.getMemory();
             auto it = tokenStream->begin();
-//            if (it->type != dsm::TYPE::T_TAG || it->data.c_str() != tagStack.top()->data().getTagAsString().c_str()) {
-//                qDebug() << "Unexecpted closed tag, should be a '" << tagStack.top()->data().getTagAsString().c_str() <<
-//                            "'. but expected '" << it->data.c_str() << "'";
-//                return;
-//            }
             tagStack.pop();
         }
     }
 
-    qDebug() << stream.c_str();
 
 }
 
@@ -412,12 +386,10 @@ void PageTree::setRoot(HTMLNode *const node)
 
 std::istream& operator>>(std::istream &input, PageTree &pageTree)
 {
-
+    std::string instr((std::istreambuf_iterator<char>(input)),
+                     std::istreambuf_iterator<char>(input));
+    pageTree.readFromString(instr);
     return input;
 }
 
-std::ostream& operator<<(std::ostream &output, PageTree &pageTree)
-{
-    output << pageTree.getSerializeData().c_str();
-    return output;
-}
+

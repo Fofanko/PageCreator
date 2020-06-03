@@ -48,7 +48,7 @@ std::string DOMElement::getText()
 {
     for(utils::StyleRecord record: m_attributes){
         if (record.m_name == "text")
-            return record.m_value;
+            return record.m_value + "\n";
     }
     return std::string("");
 }
